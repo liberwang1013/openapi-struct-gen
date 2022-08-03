@@ -98,6 +98,10 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/Pet"
+    PetOrPets:
+      oneOf:
+        - $ref: "#/components/schemas/Pet"
+        - $ref: "#/components/schemas/Pets"
     Error:
       type: object
       required:

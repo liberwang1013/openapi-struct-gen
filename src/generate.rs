@@ -2,29 +2,30 @@ use std::collections::{BTreeMap, HashSet};
 
 use codegen::Scope;
 use openapiv3::{
-    ArrayType, IntegerFormat, IntegerType, MediaType, NumberFormat, NumberType, OpenAPI, PathItem,
-    ReferenceOr, RequestBody, Response, Schema, SchemaKind, StatusCode, Type,
-    VariantOrUnknownOrEmpty,
+    ArrayType, IntegerFormat, IntegerType, NumberFormat, NumberType, ReferenceOr, Schema,
+    SchemaKind, Type, VariantOrUnknownOrEmpty,
 };
 
-//scope.new_struct("Foo")
-//    .derive("Debug")
-//    .field("one", "usize")
-//    .field("two", "String");
-
-pub fn generate(schemas: BTreeMap<String, Schema>) -> String {
+pub fn generate(
+    schemas: BTreeMap<String, Schema>,
+    derivatives: &[&str],
+    imports: &[(&str, &str)],
+) -> String {
     let mut scope = Scope::new();
+    for (path, name) in imports {
+        scope.import(path, name);
+    }
     for (name, schema) in schemas.into_iter() {
-        generate_for_schema(&mut scope, name, schema);
+        generate_for_schema(&mut scope, name, schema, derivatives);
     }
     scope.to_string()
 }
 
-fn generate_for_schema(scope: &mut Scope, name: String, schema: Schema) {
+fn generate_for_schema(scope: &mut Scope, name: String, schema: Schema, derivatives: &[&str]) {
     match schema.schema_kind {
-        SchemaKind::Type(r#type) => generate_struct(scope, name, r#type),
-        SchemaKind::OneOf { one_of } => generate_enum(scope, name, one_of),
-        SchemaKind::AnyOf { any_of } => generate_enum(scope, name, any_of),
+        SchemaKind::Type(r#type) => generate_struct(scope, name, r#type, derivatives),
+        SchemaKind::OneOf { one_of } => generate_enum(scope, name, one_of, derivatives),
+        SchemaKind::AnyOf { any_of } => generate_enum(scope, name, any_of, derivatives),
         _ => panic!("Does not support 'allOf', 'not' and 'any'"),
     }
 }
@@ -68,10 +69,7 @@ fn gen_property_type_for_schema_kind(sk: SchemaKind) -> String {
     }
 }
 
-fn get_property_type_from_schema_refor(
-    refor: ReferenceOr<Box<Schema>>,
-    is_required: bool,
-) -> String {
+fn get_property_type_from_schema_refor(refor: ReferenceOr<Schema>, is_required: bool) -> String {
     let t = match refor {
         ReferenceOr::Item(i) => gen_property_type_for_schema_kind(i.schema_kind),
         ReferenceOr::Reference { reference } => handle_reference(reference),
@@ -85,7 +83,7 @@ fn get_property_type_from_schema_refor(
 
 fn gen_array_type(a: ArrayType) -> String {
     let inner_type = if let Some(items) = a.items {
-        get_property_type_from_schema_refor(items, true)
+        get_property_type_from_schema_refor(items.unbox(), true)
     } else {
         todo!();
     };
@@ -106,14 +104,17 @@ fn handle_reference(reference: String) -> String {
     split.pop().unwrap().to_owned()
 }
 
-fn generate_struct(scope: &mut Scope, name: String, r#type: Type) {
+fn generate_struct(scope: &mut Scope, name: String, r#type: Type, derivatives: &[&str]) {
     match r#type {
         Type::Object(obj) => {
-            let mut r#struct = scope.new_struct(&name).vis("pub").derive("Debug");
+            let r#struct = scope.new_struct(&name).vis("pub").derive("Debug");
+            for derivative in derivatives {
+                r#struct.derive(derivative);
+            }
             let required = obj.required.into_iter().collect::<HashSet<String>>();
             for (name, refor) in obj.properties {
                 let is_required = required.contains(&name);
-                let t = get_property_type_from_schema_refor(refor, is_required);
+                let t = get_property_type_from_schema_refor(refor.unbox(), is_required);
                 r#struct.field(&name, &t);
             }
         }
@@ -127,7 +128,19 @@ fn generate_struct(scope: &mut Scope, name: String, r#type: Type) {
     }
 }
 
-fn generate_enum(scope: &mut Scope, name: String, types: Vec<ReferenceOr<Schema>>) {
-    println!("#{:#?}", types);
-    todo!();
+fn generate_enum(
+    scope: &mut Scope,
+    name: String,
+    types: Vec<ReferenceOr<Schema>>,
+    derivatives: &[&str],
+) {
+    let r#enum = scope.new_enum(&name).vis("pub").derive("Debug");
+    for derivative in derivatives {
+        r#enum.derive(derivative);
+    }
+
+    for t in types.into_iter() {
+        let t = get_property_type_from_schema_refor(t, true);
+        r#enum.new_variant(&t).tuple(&t);
+    }
 }

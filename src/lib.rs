@@ -8,6 +8,8 @@ use openapiv3::OpenAPI;
 pub fn generate<P1: AsRef<std::path::Path>, P2: AsRef<std::path::Path>>(
     schema_filename: P1,
     output_filename: P2,
+    derivatives: &[&str],
+    imports: &[(&str, &str)],
 ) -> Result<(), GenError> {
     let schema_filename = schema_filename.as_ref();
     let data = std::fs::read_to_string(schema_filename)?;
@@ -17,7 +19,7 @@ pub fn generate<P1: AsRef<std::path::Path>, P2: AsRef<std::path::Path>>(
         o => return Err(GenError::WrongFileExtension(o.map(|s| s.to_owned()))),
     };
     let schemas_map = parse::parse_schema(oapi);
-    let resp = generate::generate(schemas_map);
+    let resp = generate::generate(schemas_map, derivatives, imports);
     std::fs::write(output_filename, resp)?;
     Ok(())
 }
