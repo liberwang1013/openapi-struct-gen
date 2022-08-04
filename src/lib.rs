@@ -31,7 +31,7 @@ pub fn generate<P1: AsRef<std::path::Path>, P2: AsRef<std::path::Path>>(
 }
 
 #[macro_export]
-macro_rules! include_oapi_structs {
+macro_rules! include {
     ($package: tt) => {
         include!(concat!(env!("OUT_DIR"), concat!("/", $package, ".rs")));
     };

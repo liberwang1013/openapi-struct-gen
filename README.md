@@ -34,7 +34,7 @@ fn main() {
 
 ### code:
 ```rust
-include_oapi_structs!("oapi");
+openapi_struct_gen::include!("oapi");
 ```
 
 ## Goals
