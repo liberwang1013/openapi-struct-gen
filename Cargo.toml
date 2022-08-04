@@ -1,6 +1,6 @@
 [package]
 name = "openapi-struct-gen"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Generate rust structures from an openapi 3.0 definition"
 license = "Apache-2.0"
@@ -9,9 +9,13 @@ repository = "https://gitlab.com/amentis/openapi-struct-gen"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-openapiv3 = "1.0.1"
-serde_json = "1.0.82"
-serde_yaml = "0.9.2"
-indexmap = "^1.0"
-heck = "0.4.0"
-codegen = "0.1.3"
+openapiv3 = { version = "1.0.1", optional = true }
+serde_json = { version = "1.0.82", optional = true }
+serde_yaml = { version = "0.9.2", optional = true }
+indexmap = { version = "^1.0", optional = true }
+heck = { version = "0.4.0", optional = true }
+codegen = { version = "0.1.3", optional = true }
+
+[features]
+default = []
+build = ["openapiv3", "serde_json", "serde_yaml", "indexmap", "heck", "codegen"]

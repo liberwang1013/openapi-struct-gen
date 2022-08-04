@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, HashSet};
 
 use codegen::Scope;
+use heck::ToSnekCase;
 use openapiv3::{
     ArrayType, IntegerFormat, IntegerType, NumberFormat, NumberType, ReferenceOr, Schema,
     SchemaKind, Type, VariantOrUnknownOrEmpty,
@@ -115,7 +116,7 @@ fn generate_struct(scope: &mut Scope, name: String, r#type: Type, derivatives: &
             for (name, refor) in obj.properties {
                 let is_required = required.contains(&name);
                 let t = get_property_type_from_schema_refor(refor.unbox(), is_required);
-                r#struct.field(&name, &t);
+                r#struct.field(&name.to_snek_case(), &t);
             }
         }
         Type::Array(a) => {

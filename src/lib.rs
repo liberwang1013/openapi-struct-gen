@@ -1,10 +1,16 @@
+#[cfg(feature = "build")]
 pub mod error;
+#[cfg(feature = "build")]
 mod generate;
+#[cfg(feature = "build")]
 mod parse;
 
+#[cfg(feature = "build")]
 use crate::error::GenError;
+#[cfg(feature = "build")]
 use openapiv3::OpenAPI;
 
+#[cfg(feature = "build")]
 pub fn generate<P1: AsRef<std::path::Path>, P2: AsRef<std::path::Path>>(
     schema_filename: P1,
     output_filename: P2,
@@ -22,4 +28,11 @@ pub fn generate<P1: AsRef<std::path::Path>, P2: AsRef<std::path::Path>>(
     let resp = generate::generate(schemas_map, derivatives, imports);
     std::fs::write(output_filename, resp)?;
     Ok(())
+}
+
+#[macro_export]
+macro_rules! include_oapi_structs {
+    ($package: tt) => {
+        include!(concat!(env!("OUT_DIR"), concat!("/", $package, ".rs")));
+    };
 }
