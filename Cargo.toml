@@ -1,6 +1,6 @@
 [package]
 name = "openapi-struct-gen"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "Generate rust structures from an openapi 3.0 definition"
 license = "Apache-2.0"

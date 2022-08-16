@@ -116,7 +116,7 @@ fn generate_struct(scope: &mut Scope, name: String, r#type: Type, derivatives: &
             for (name, refor) in obj.properties {
                 let is_required = required.contains(&name);
                 let t = get_property_type_from_schema_refor(refor.unbox(), is_required);
-                r#struct.field(&name.to_snek_case(), &t);
+                r#struct.field(&format!("pub {}", &name.to_snek_case()), &t);
             }
         }
         Type::Array(a) => {
