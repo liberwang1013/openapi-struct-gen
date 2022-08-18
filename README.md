@@ -27,7 +27,7 @@ fn main() {
         format!("{}/{}", std::env::var("OUT_DIR").unwrap(), "oapi.rs"),
         Some(&["Clone", "Serialize", "Deserialize"]),
         Some(&[("serde", "Serialize"), ("serde", "Deserialize")]),
-        Some(&[r#"#[serde(rename_all = "camelCase")"#]),
+        Some(&[r#"#[serde(rename_all = "camelCase")]"#]),
     )
     .unwrap();
 }

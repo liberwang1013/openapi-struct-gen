@@ -128,17 +128,17 @@ fn generate_struct(
 ) {
     match r#type {
         Type::Object(obj) => {
+            let mut derivs = vec!["Debug"];
+            if let Some(derivatives) = derivatives {
+                derivs.extend(derivatives);
+            }
+            scope.raw(&format!("#[derive({})]", derivs.join(", ")));
             if let Some(annotations) = annotations {
                 for annotation in annotations {
                     scope.raw(annotation);
                 }
             }
-            let r#struct = scope.new_struct(&name).vis("pub").derive("Debug");
-            if let Some(derivatives) = derivatives {
-                for derivative in derivatives {
-                    r#struct.derive(derivative);
-                }
-            }
+            let r#struct = scope.new_struct(&name).vis("pub");
             let required = obj.required.into_iter().collect::<HashSet<String>>();
             for (name, refor) in obj.properties {
                 let is_required = required.contains(&name);
@@ -163,17 +163,18 @@ fn generate_enum(
     derivatives: Option<&[&str]>,
     annotations: Option<&[&str]>,
 ) {
+    let mut derivs = vec!["Debug"];
+    if let Some(derivatives) = derivatives {
+        derivs.extend(derivatives);
+    }
+    scope.raw(&format!("#[derive({})]", derivs.join(", ")));
+
     if let Some(annotations) = annotations {
         for annotation in annotations {
             scope.raw(annotation);
         }
     }
-    let r#enum = scope.new_enum(&name).vis("pub").derive("Debug");
-    if let Some(derivatives) = derivatives {
-        for derivative in derivatives {
-            r#enum.derive(derivative);
-        }
-    }
+    let r#enum = scope.new_enum(&name).vis("pub");
 
     for t in types.into_iter() {
         let t = get_property_type_from_schema_refor(t, true);
