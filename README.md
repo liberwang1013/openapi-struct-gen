@@ -25,8 +25,9 @@ fn main() {
             "api.yaml"
         ),
         format!("{}/{}", std::env::var("OUT_DIR").unwrap(), "oapi.rs"),
-        &["Clone", "Serialize", "Deserialize"],
-        &[("serde", "Serialize"), ("serde", "Deserialize")],
+        Some(&["Clone", "Serialize", "Deserialize"]),
+        Some(&[("serde", "Serialize"), ("serde", "Deserialize")]),
+        Some(&[r#"#[serde(rename_all = "camelCase")"#]),
     )
     .unwrap();
 }

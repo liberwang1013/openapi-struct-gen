@@ -9,24 +9,37 @@ use openapiv3::{
 
 pub fn generate(
     schemas: BTreeMap<String, Schema>,
-    derivatives: &[&str],
-    imports: &[(&str, &str)],
+    derivatives: Option<&[&str]>,
+    imports: Option<&[(&str, &str)]>,
+    annotations: Option<&[&str]>,
 ) -> String {
     let mut scope = Scope::new();
-    for (path, name) in imports {
-        scope.import(path, name);
+    if let Some(imports) = imports {
+        for (path, name) in imports {
+            scope.import(path, name);
+        }
     }
     for (name, schema) in schemas.into_iter() {
-        generate_for_schema(&mut scope, name, schema, derivatives);
+        generate_for_schema(&mut scope, name, schema, derivatives, annotations);
     }
     scope.to_string()
 }
 
-fn generate_for_schema(scope: &mut Scope, name: String, schema: Schema, derivatives: &[&str]) {
+fn generate_for_schema(
+    scope: &mut Scope,
+    name: String,
+    schema: Schema,
+    derivatives: Option<&[&str]>,
+    annotations: Option<&[&str]>,
+) {
     match schema.schema_kind {
-        SchemaKind::Type(r#type) => generate_struct(scope, name, r#type, derivatives),
-        SchemaKind::OneOf { one_of } => generate_enum(scope, name, one_of, derivatives),
-        SchemaKind::AnyOf { any_of } => generate_enum(scope, name, any_of, derivatives),
+        SchemaKind::Type(r#type) => generate_struct(scope, name, r#type, derivatives, annotations),
+        SchemaKind::OneOf { one_of } => {
+            generate_enum(scope, name, one_of, derivatives, annotations)
+        }
+        SchemaKind::AnyOf { any_of } => {
+            generate_enum(scope, name, any_of, derivatives, annotations)
+        }
         _ => panic!("Does not support 'allOf', 'not' and 'any'"),
     }
 }
@@ -105,12 +118,26 @@ fn handle_reference(reference: String) -> String {
     split.pop().unwrap().to_owned()
 }
 
-fn generate_struct(scope: &mut Scope, name: String, r#type: Type, derivatives: &[&str]) {
+fn generate_struct(
+    scope: &mut Scope,
+    name: String,
+    r#type: Type,
+
+    derivatives: Option<&[&str]>,
+    annotations: Option<&[&str]>,
+) {
     match r#type {
         Type::Object(obj) => {
+            if let Some(annotations) = annotations {
+                for annotation in annotations {
+                    scope.raw(annotation);
+                }
+            }
             let r#struct = scope.new_struct(&name).vis("pub").derive("Debug");
-            for derivative in derivatives {
-                r#struct.derive(derivative);
+            if let Some(derivatives) = derivatives {
+                for derivative in derivatives {
+                    r#struct.derive(derivative);
+                }
             }
             let required = obj.required.into_iter().collect::<HashSet<String>>();
             for (name, refor) in obj.properties {
@@ -133,11 +160,19 @@ fn generate_enum(
     scope: &mut Scope,
     name: String,
     types: Vec<ReferenceOr<Schema>>,
-    derivatives: &[&str],
+    derivatives: Option<&[&str]>,
+    annotations: Option<&[&str]>,
 ) {
+    if let Some(annotations) = annotations {
+        for annotation in annotations {
+            scope.raw(annotation);
+        }
+    }
     let r#enum = scope.new_enum(&name).vis("pub").derive("Debug");
-    for derivative in derivatives {
-        r#enum.derive(derivative);
+    if let Some(derivatives) = derivatives {
+        for derivative in derivatives {
+            r#enum.derive(derivative);
+        }
     }
 
     for t in types.into_iter() {
