@@ -1,115 +1,1553 @@
-openapi: "3.0.0"
+---
+openapi: "3.0.3"
 info:
-  version: 1.0.0
-  title: Swagger Petstore
-  license:
-    name: MIT
-servers:
-  - url: http://petstore.swagger.io/v1
-paths:
-  /pets:
-    get:
-      summary: List all pets
-      operationId: listPets
-      tags:
-        - pets
-      parameters:
-        - name: limit
-          in: query
-          description: How many items to return at one time (max 100)
-          required: false
-          schema:
-            type: integer
-            format: int32
-      responses:
-        '200':
-          description: A paged array of pets
-          headers:
-            x-next:
-              description: A link to the next page of responses
-              schema:
-                type: string
-          content:
-            application/json:    
-              schema:
-                $ref: "#/components/schemas/Pets"
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-    post:
-      summary: Create a pet
-      operationId: createPets
-      tags:
-        - pets
-      responses:
-        '201':
-          description: Null response
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-  /pets/{petId}:
-    get:
-      summary: Info for a specific pet
-      operationId: showPetById
-      tags:
-        - pets
-      parameters:
-        - name: petId
-          in: path
-          required: true
-          description: The id of the pet to retrieve
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Expected response to a valid request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Pet"
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+  version: 3.0.0
+  title: "Flight Search Backend"
+x-amazon-apigateway-request-validators:
+  all:
+   validateRequestBody: true
+   validateRequestParameters: true
+x-amazon-apigateway-request-validator: all
 components:
   schemas:
-    Pet:
+    Empty:
       type: object
-      required:
-        - id
-        - name
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        tag:
-          type: string
-    Pets:
-      type: array
-      items:
-        $ref: "#/components/schemas/Pet"
-    PetOrPets:
-      oneOf:
-        - $ref: "#/components/schemas/Pet"
-        - $ref: "#/components/schemas/Pets"
     Error:
       type: object
       required:
-        - code
         - message
       properties:
-        code:
-          type: integer
-          format: int32
         message:
           type: string
+          description: Human readable representation of the error
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Human readable representation of the error
+    SearchRequest:
+      type: object
+      required:
+      - origin
+      - destination
+      - depdate
+      properties:
+        origin:
+          pattern: "^[A-Z]{3}$"
+          type: string
+          description: IATA airport code
+        destination:
+          pattern: "^[A-Z]{3}$"
+          type: string
+          description: IATA airport code
+        cabin:
+          enum:
+          - ANY
+          - ECON
+          - PREMECON
+          - BUSINESS
+          - FIRST
+          type: string
+          description: Cabin selection
+        depdate:
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$"
+          type: string
+          description: Departure date in YYYY-MM-DD format
+        retdate:
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$"
+          type: string
+          description: Return date in YYYY-MM-DD format
+        travelers:
+          minimum: 1
+          maximum: 9
+          type: integer
+          description: Number of travelers
+        airlines:
+          type: array
+          items:
+            pattern: "^[A-Z]{1}[0-9A-Z]{1}"
+            maxItems: 10
+            type: string
+          uniqueItems: true
+          description: Airline selection
+        nonstop:
+          type: boolean
+          description: Return only direct connections
+        filter:
+          $ref: "#/components/schemas/Filter"
+    Filter:
+      type: object
+      properties:
+        baggage:
+          type: array
+          items:
+            type: string
+            enum:
+            - carry-on
+            - checked
+        power:
+          type: array
+          items:
+            type: string
+            enum:
+            - usb
+            - outlet
+        food:
+          type: array
+          items:
+            type: string
+            enum:
+            - meal
+            - beverages
+        entertainment:
+          type: array
+          items:
+            type: string
+            enum:
+            - streaming
+            - in-seat
+            - overhead
+        changes:
+          type: array
+          items:
+            type: boolean
+        wifi:
+          type: array
+          items:
+            type: string
+            enum:
+            - e-mail
+            - text
+        refundable:
+          type: array
+          items:
+            type: boolean
+        nrStops:
+          type: integer
+    Travelers:
+      type: object
+      properties:
+        adt:
+          type: integer
+        cnn:
+          type: integer
+        inf:
+          type: integer
+    RhFlightSearchRequest:
+      type: object
+      required:
+      - origin
+      - destination
+      - depdate
+      - travelers
+      - stops
+      - cabin
+      properties:
+        origin:
+          pattern: "^[A-Z]{3}$"
+          type: string
+          description: IATA airport code
+        destination:
+          pattern: "^[A-Z]{3}$"
+          type: string
+          description: IATA airport code
+        depdate:
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$"
+          type: string
+          description: Departure date in YYYY-MM-DD format
+        retdate:
+          pattern: "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$"
+          type: string
+          description: Return date in YYYY-MM-DD format
+        fbc:
+          type: string
+          description: fare basis code by which to filter results
+        fltno:
+          pattern: "^[A-Z]{2}[0-9]{4}$"
+          type: string
+          description: flight number by which to filter results
+        travelers:
+          type: object
+          $ref: "#/components/schemas/Travelers"
+        stops:
+          type: array
+          description: number of stops constaints
+          items:
+            type: string
+            enum:
+              - NONSTOP
+              - ONESTOP
+              - TWOORMORE
+        cabin:
+          type: array
+          description: list of allowed cabin selections
+          items:
+            enum:
+            - ECON
+            - PREMECON
+            - BUSINESS
+            - FIRST
+            type: string
+            description: Cabin selection
+        chanpartners:
+          type: string
+          description: channel uuid for impersonation
+        faresource:
+          type: string
+          description: fare source for consapi
+        language:
+          type: string
+          description: language for consapi
+        pos:
+          pattern: "^[A-Z]{2}$"
+          type: string
+          description: Point of Sale
+        currency:
+          pattern: "^[A-Z]{3}$"
+          type: string
+          description: Currency code
+        acccode:
+          type: string
+          description: Account code for consapi
+        pcc:
+          type: string
+          description: Pseudo city code for consapi
+        travelagency:
+          type: string
+          description: Travel agency code for consapi
+        office:
+          type: string
+          description: Office ID for consapi
+    ResultsRequest:
+      type: object
+      required:
+      - searchId
+      - page
+      properties:
+        searchId:
+          pattern: "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+          type: string
+          description: Search ID, returned from /search call
+        page:
+          type: integer
+            #minimum: 0
+          description: page
+        sortby:
+          enum:
+          - cxrName
+          - depTime
+          - arrTime
+          - nrStops
+          - cxrCode
+          type: string
+          description: Sorting parameters
+        filter:
+          $ref: "#/components/schemas/Filter"
+        pagelen:
+          type: integer
+            #mininum: 1
+          maximum: 200
+    FlightNumbers:
+      type: object
+      properties:
+        inbound:
+          type: integer
+        outbound:
+          type: integer
+    AmenitiesSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        exists:
+          type: string
+        display_text:
+          type: string
+    AmenitiesSeat:
+      type: object
+      properties:
+        legroom:
+          type: string
+        pitch:
+          type: string
+        width:
+          type: string
+        flatness:
+          type: string
+
+        id:
+          type: string
+        display_text:
+          type: string
+        quality:
+          type: string
+        type:
+          type: string
+        updated_at:
+          type: string
+        cost:
+          type: string
+        exists:
+          type: string
+    AmenitiesWifi:
+      type: object
+      properties:
+        performance:
+          type: string
+        chance:
+          type: string
+        coverage:
+          type: string
+        connectivity_type:
+          type: string
+
+        id:
+          type: string
+        display_text:
+          type: string
+        quality:
+          type: string
+        type:
+          type: string
+        updated_at:
+          type: string
+        cost:
+          type: string
+        exists:
+          type: string
+    AmenitiesPower:
+      type: object
+      properties:
+        distribution:
+          type: string
+        multiple_at_seat:
+          type: string
+        usb_port:
+          type: string
+        power_outlet:
+          type: string
+        chance:
+          type: string
+
+        id:
+          type: string
+        display_text:
+          type: string
+        quality:
+          type: string
+        type:
+          type: string
+        updated_at:
+          type: string
+        cost:
+          type: string
+        exists:
+          type: string
+    AmenitiesEntertainment:
+      type: object
+      properties:
+        offerings:
+          type: object
+          additionalProperties: true
+        delivery_medium:
+          type: string
+        content_type:
+          type: string
+        selection_type:
+          type: string
+
+        id:
+          type: string
+        display_text:
+          type: string
+        quality:
+          type: string
+        type:
+          type: string
+        updated_at:
+          type: string
+        cost:
+          type: string
+        exists:
+          type: string
+    AmenitiesFreshFood:
+      type: object
+      properties:
+        id:
+          type: string
+        display_text:
+          type: string
+        quality:
+          type: string
+        type:
+          type: string
+        updated_at:
+          type: string
+        cost:
+          type: string
+        exists:
+          type: string
+    AmenitiesBeverage:
+      type: object
+      properties:
+        alcoholic_cost:
+          type: string
+        nonalcoholic_cost:
+          type: string
+        id:
+          type: string
+        display_text:
+          type: string
+        quality:
+          type: string
+        type:
+          type: string
+        updated_at:
+          type: string
+        cost:
+          type: string
+        exists:
+          type: string
+    AmenitiesLayout:
+      type: object
+      properties:
+        row_layout:
+          type: string
+        direct_aisle_access:
+          type: string
+        id:
+          type: string
+        display_text:
+          type: string
+        quality:
+          type: string
+        type:
+          type: string
+        updated_at:
+          type: string
+        cost:
+          type: string
+        exists:
+          type: string
+    AmenitiesAircraft:
+      type: object
+      properties:
+        model:
+          type: string
+        cabin_pressure:
+          type: string
+        window_size:
+          type: string
+        id:
+          type: string
+        display_text:
+          type: string
+        quality:
+          type: string
+        type:
+          type: string
+        updated_at:
+          type: string
+        cost:
+          type: string
+        exists:
+          type: string
+    UpaCommon:
+      type: object
+      properties:
+        caption:
+          type: string
+        embed_url:
+          type: string
+        large_url:
+          type: string
+        medium_square_url:
+          type: string
+        thumb_url:
+          type: string
+        url:
+          type: string
+    OptionalServiceIdentifier:
+      type: object
+      properties:
+        group_code:
+          type: string
+        sub_code:
+          type: string
+        sub_group_code:
+          type: string
+    UpaFee:
+      type: object
+      properties:
+        amount:
+          format: double
+          type: number
+        currency:
+          type: string
+    Upa:
+      type: object
+      properties:
+        att_descr:
+          type: string
+        categories:
+          type: array
+          items:
+            type: string
+        cta_text:
+          type: string
+        cta_url:
+          type: string
+        description:
+          type: string
+        fees:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpaFee'
+        headline:
+          type: string
+        id:
+          type: string
+        large_icon_url:
+          type: string
+        optional_service_identifiers:
+          items:
+            $ref: '#/components/schemas/OptionalServiceIdentifier'
+          type: array
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpaCommon'
+        small_icon_url:
+          type: string
+        tours:
+          items:
+            $ref: '#/components/schemas/UpaCommon'
+          type: array
+        videos:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpaCommon'
+    ArrDep:
+      type: object
+      properties:
+        date:
+          type: string
+        terminal:
+          type: string
+        airport:
+          type: string
+        time:
+          type: string
+    PortionOfTravelLegAmenities:
+      type: object
+      properties:
+        seat:
+          $ref: "#/components/schemas/AmenitiesSeat"
+        wifi:
+          $ref: "#/components/schemas/AmenitiesWifi"
+        power:
+          $ref: "#/components/schemas/AmenitiesPower"
+        entertainment:
+          $ref: "#/components/schemas/AmenitiesEntertainment"
+        fresh_food:
+          $ref: "#/components/schemas/AmenitiesFreshFood"
+        beverage:
+          $ref: "#/components/schemas/AmenitiesBeverage"
+        layout:
+          $ref: "#/components/schemas/AmenitiesLayout"
+        aircraft:
+          $ref: "#/components/schemas/AmenitiesAircraft"
+    PortionOfTravelAmenities:
+      type: object
+      properties:
+        aircraft_summary:
+          $ref: "#/components/schemas/AmenitiesSummary"
+        entertainment_summary:
+          $ref: "#/components/schemas/AmenitiesSummary"
+        seat_summary:
+          $ref: "#/components/schemas/AmenitiesSummary"
+        layout_summary:
+          $ref: "#/components/schemas/AmenitiesSummary"
+        wifi_summary:
+          $ref: "#/components/schemas/AmenitiesSummary"
+        power_summary:
+          $ref: "#/components/schemas/AmenitiesSummary"
+        fresh_food_summary:
+          $ref: "#/components/schemas/AmenitiesSummary"
+    PortionOfTravelLeg:
+      type: object
+      properties:
+        duration:
+          type: string
+        operatingCxr:
+          type: string
+        operatingCxrName:
+          type: string
+        equipment:
+          type: string
+        departure:
+          $ref: "#/components/schemas/ArrDep"
+        techStops:
+          type: array
+          items:
+            type: string
+        id:
+          type: string
+        idx:
+          type: integer
+        fltNumber:
+          type: string
+        mileage:
+          type: integer
+        connectionTime:
+          type: array
+          items:
+            type: integer
+        cxr:
+          type: string
+        cxrName:
+          type: string
+        arrival:
+          $ref: "#/components/schemas/ArrDep"
+        upa:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/Upa"
+        amenities:
+          $ref: "#/components/schemas/PortionOfTravelLegAmenities"
+    PortionOfTravelFareInfoFc:
+      type: object
+      properties:
+        currency:
+          type: string
+        farePrice:
+          type: number
+    PortionOfTravelFareInfo:
+      type: object
+      properties:
+        brandMatrixRefKey:
+          type: string
+        cxr:
+          type: string
+        cxrName:
+          type: string
+        fareTypeCodeDesc:
+          type: string
+        brandName:
+          type: string
+        endorsement:
+          type: array
+          items:
+            type: string
+        segs:
+          type: array
+          items:
+            type: integer
+        brandId:
+          type: integer
+        fbc:
+          type: string
+        fareRefKey:
+          type: string
+        fc:
+          $ref: "#/components/schemas/PortionOfTravelFareInfoFc"
+        fareTypeCode:
+          type: string
+        arrCode:
+          type: string
+        fareType:
+          type: string
+        cabin:
+          type: string
+        depCode:
+          type: string
+        gi:
+          type: string
+    PortionOfTravelFareBce:
+      type: object
+      properties:
+        prime:
+          type: string
+        restr:
+          type: string
+        bc1:
+          type: string
+        bc2:
+          type: string
+    PortionOfTravelFareRbd:
+      type: object
+      properties:
+        segId:
+          type: integer
+        code:
+          type: string
+        bce:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortionOfTravelFareBce"
+    PortionOfTravelFareRule:
+      type: object
+      properties:
+        fareInfo:
+          $ref: "#/components/schemas/PortionOfTravelFareInfo"
+        rbd:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortionOfTravelFareRbd"
+    PortionOfTravelFarePolicyFee:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: double
+        currency_code:
+          type: string
+    PortionOfTravelFarePolicy:
+      type: object
+      properties:
+        headline:
+          type: string
+        description:
+          type: string
+        assessment_code:
+          type: string
+        fee:
+          $ref: "#/components/schemas/PortionOfTravelFarePolicyFee"
+    PortionOfTravelFareBrand:
+      type: object
+      properties:
+        brand:
+          type: string
+        codes:
+          type: array
+          items:
+            type: string
+    PortionOfTravelFareUtaAttributesFee:
+      type: object
+      properties:
+        currency_code:
+          type: string
+        amount_min:
+          type: number
+          format: double
+        amount:
+          type: number
+          format: double
+        amount_max:
+          type: number
+          format: double
+    PortionOfTravelFareUtaAttributesBagLimits:
+      type: object
+      properties:
+        weight_kg:
+          type: string
+        size_lcm:
+          type: string
+    PortionOfTravelFareUtaAttributes:
+      type: object
+      properties:
+        headline:
+          type: string
+        description:
+          type: string
+        small_icon_url:
+          type: string
+        large_icon_url:
+          type: string
+        cta_text:
+          type: string
+        cta_url:
+          type: string
+        assessment:
+          type: string
+        categories:
+          type: array
+          items:
+            type: string
+        fees:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortionOfTravelFareUtaAttributesFee"
+        bag_limits:
+          $ref: "#/components/schemas/PortionOfTravelFareUtaAttributesBagLimits"
+    PortionOfTravelFareUta:
+      type: object
+      properties:
+        attributes:
+          $ref: "#/components/schemas/PortionOfTravelFareUtaAttributes"
+    PortionOfTravelFareUtas:
+      type: object
+      properties:
+        seat-selection:
+          $ref: "#/components/schemas/PortionOfTravelFareUta"
+        cancellation:
+          $ref: "#/components/schemas/PortionOfTravelFareUta"
+        checked-bag-allowance:
+          $ref: "#/components/schemas/PortionOfTravelFareUta"
+        advance-change:
+          $ref: "#/components/schemas/PortionOfTravelFareUta"
+        upgrade-eligibility:
+          $ref: "#/components/schemas/PortionOfTravelFareUta"
+        carry-on-allowance:
+          $ref: "#/components/schemas/PortionOfTravelFareUta"
+    PortionOfTravelFare:
+      type: object
+      properties:
+        pax:
+          type: string
+        price:
+          type: number
+        baseCurr:
+          type: string
+        fareRules:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortionOfTravelFareRule"
+        baseFare:
+          type: number
+        equiv:
+          type: number
+        changePolicy:
+          $ref: "#/components/schemas/PortionOfTravelFarePolicy"
+        utas:
+          $ref: "#/components/schemas/PortionOfTravelFareUtas"
+        brand:
+          $ref: "#/components/schemas/PortionOfTravelFareBrand"
+    PortionOfTravel:
+      type: object
+      properties:
+        id:
+          type: string
+        idx:
+          type: integer
+        fares:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortionOfTravelFare"
+        legs:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortionOfTravelLeg"
+        amenities:
+          $ref: "#/components/schemas/PortionOfTravelAmenities"
+        duration:
+          type: string
+        price:
+          type: number
+    ShelvesResult:
+      type: object
+      properties:
+        total:
+          type: number
+        currency:
+          type: string
+        cxr:
+          type: string
+        portions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortionOfTravel"
+        filter:
+          type: object
+          $ref: "#/components/schemas/Filter"
+        id:
+          type: string
+    ResponseSchema:
+      type: object
+      properties:
+        searchId:
+          type: string
+        resultsNum:
+          type: integer
+        pages:
+          type: integer
+        page:
+          type: integer
+        pageLen:
+          type: integer
+        more:
+          type: boolean
+        fltNr:
+          $ref: "#/components/schemas/FlightNumbers"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShelvesResult"
+    Airport:
+      type: object
+      properties:
+        id:
+          type: string
+        value:
+          type: string
+    Carrier:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    FareSource:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+    ChannelPartner:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    PointOfSale:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+    Language:
+      type: object
+      properties:
+        code:
+          type: string
+        english:
+          type: string
+        local:
+          type: string
+        writeDirection:
+          type: string
+    Currency:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+    AutocompleteAptsSchema:
+      type: array
+      items:
+        $ref: "#/components/schemas/Airport"
+    AutocompleteCxrsSchema:
+      type: array
+      items:
+        $ref: "#/components/schemas/Carrier"
+    AutocompleteFareSourcesSchema:
+      type: array
+      items:
+        $ref: "#/components/schemas/FareSource"
+    AutocompleteChannelPartnersSchema:
+      type: array
+      items:
+        $ref: "#/components/schemas/ChannelPartner"
+    AutocompletePointOfSaleSchema:
+      type: array
+      items:
+        $ref: "#/components/schemas/PointOfSale"
+    AutocompleteLanguageSchema:
+      type: array
+      items:
+        $ref: "#/components/schemas/Language"
+    AutocompleteCurrencySchema:
+      type: array
+      items:
+        $ref: "#/components/schemas/Currency"
+
+  responses:
+    EmptyResponse:
+      description: Empty response
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Empty"
+    Response:
+      description: Api response
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ResponseSchema"
+    AutocompleteApts:
+      description: Autocomplete airports
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AutocompleteAptsSchema"
+    AutocompleteCxrs:
+      description: Autocomplete carriers
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AutocompleteCxrsSchema"
+    AutocompleteFareSources:
+      description: Autocomplete fare sources
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AutocompleteFareSourcesSchema"
+    AutocompleteChannelPartners:
+      description: Autocomplete channel partners
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AutocompleteChannelPartnersSchema"
+    AutocompletePointsOfSale:
+      description: Autocomplete point of sale
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AutocompletePointOfSaleSchema"
+    AutocompleteLanguage:
+      description: Autocomplete language
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AutocompleteLanguageSchema"
+    AutocompleteCurrency:
+      description: Autocomplete currency
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AutocompleteCurrencySchema"
+    ErrorResponse:
+      description: Any error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+paths:
+  /legacy/ngs_search:
+    options:
+      tags:
+        - cors
+      operationId: cors-ngs-search
+      summary: fix cors
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptyResponse'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendSetupCorsFunction/invocations
+    post:
+      tags:
+        - search
+      operationId: search
+      summary: make a search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/Response'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendSearchFunction/invocations
+  /v1/flight_search:
+    options:
+      tags:
+        - cors
+      operationId: cors-search
+      summary: fix cors
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptyResponse'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendSetupCorsFunction/invocations
+    post:
+      tags:
+        - search
+      operationId: flight_search
+      summary: make a rh flight search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RhFlightSearchRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/Response'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendRhFlightSearchFunction/invocations
+  /v1/results:
+    options:
+      tags:
+        - cors
+      operationId: cors-results
+      summary: fix cors
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptyResponse'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendSetupCorsFunction/invocations
+    post:
+      tags:
+        - results
+      operationId: results
+      summary: get results
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResultsRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/Response'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendResultsFunction/invocations
+  /v1/autocomplete/apts:
+    options:
+      tags:
+        - cors
+      operationId: cors-apts
+      summary: fix cors
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptyResponse'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendSetupCorsFunction/invocations
+    get:
+      tags:
+        - autocomplete
+      operationId: autocompleteApts
+      summary: autocomplete airports
+      parameters:
+      - in: query
+        name: q
+        description: query string
+        schema:
+          type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/AutocompleteApts'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendAutocompleteAirportsFunction/invocations
+  /v1/autocomplete/cxrs:
+    options:
+      tags:
+        - cors
+      operationId: cors-cxrs
+      summary: fix cors
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptyResponse'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendSetupCorsFunction/invocations
+    get:
+      tags:
+        - autocomplete
+      operationId: autocompleteCxrs
+      summary: autocomplete carriers
+      parameters:
+      - in: query
+        name: q
+        description: query string
+        schema:
+          type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/AutocompleteCxrs'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendAutocompleteCarriersFunction/invocations
+  /v1/autocomplete/fare_sources:
+    options:
+      tags:
+        - cors
+      operationId: cors-fs
+      summary: fix cors
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptyResponse'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendSetupCorsFunction/invocations
+    get:
+      tags:
+        - autocomplete
+      operationId: autocompleteFareSources
+      summary: autocomplete fare sources
+      parameters:
+      - in: query
+        name: q
+        description: query string
+        schema:
+          type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/AutocompleteFareSources'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendAutocompleteFaresourceFunction/invocations
+  /v1/autocomplete/channel_partners:
+    options:
+      tags:
+        - cors
+      operationId: cors-fs
+      summary: fix cors
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptyResponse'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendSetupCorsFunction/invocations
+    get:
+      tags:
+        - autocomplete
+      operationId: autocompleteChannelPartners
+      summary: autocomplete channel partners
+      parameters:
+      - in: query
+        name: q
+        description: query string
+        schema:
+          type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/AutocompleteChannelPartners'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendAutocompleteChannelpartnersFunction/invocations
+  /v1/autocomplete/pos:
+    options:
+      tags:
+        - cors
+      operationId: cors-pos
+      summary: fix cors
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptyResponse'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendSetupCorsFunction/invocations
+    get:
+      tags:
+        - autocomplete
+      operationId: autocompletePos
+      summary: autocomplete pos
+      parameters:
+      - in: query
+        name: q
+        description: query string
+        schema:
+          type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/AutocompletePointsOfSale'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendAutocompletePosFunction/invocations
+  /v1/autocomplete/languages:
+    options:
+      tags:
+        - cors
+      operationId: cors-lgs
+      summary: fix cors
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptyResponse'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendSetupCorsFunction/invocations
+    get:
+      tags:
+        - autocomplete
+      operationId: autocompleteLanguages
+      summary: autocomplete languages
+      parameters:
+      - in: query
+        name: q
+        description: query string
+        schema:
+          type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/AutocompleteLanguage'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendAutocompleteLanguagesFunction/invocations
+  /v1/autocomplete/currencies:
+    options:
+      tags:
+        - cors
+      operationId: cors-curs
+      summary: fix cors
+      responses:
+        '200':
+          $ref: '#/components/responses/EmptyResponse'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendSetupCorsFunction/invocations
+    get:
+      tags:
+        - autocomplete
+      operationId: autocompleteCurrencies
+      summary: autocomplete currencies
+      parameters:
+      - in: query
+        name: q
+        description: query string
+        schema:
+          type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/AutocompleteCurrency'
+        '400':
+          $ref: "#/components/responses/ErrorResponse"
+        '404':
+          $ref: "#/components/responses/ErrorResponse"
+        '500':
+          $ref: "#/components/responses/ErrorResponse"
+      x-amazon-apigateway-integration:
+        contentHandling: CONVERT_TO_TEXT
+        httpMethod: POST
+        passthroughBehavior: when_no_match
+        responses:
+          default:
+            statusCode: '200'
+        type: aws_proxy
+        uri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:969697855041:function:FlightSearchBackendAutocompleteCurrenciesFunction/invocations

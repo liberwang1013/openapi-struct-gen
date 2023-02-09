@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, HashSet};
 
+use check_keyword::CheckKeyword;
+
 use codegen::Scope;
 use heck::ToSnekCase;
 use openapiv3::{
@@ -73,7 +75,7 @@ fn gen_type_name_for_type(t: Type) -> String {
         Type::String(_) => "String".into(),
         Type::Number(f) => get_number_type(f),
         Type::Integer(f) => get_integer_type(f),
-        Type::Object(_) => "serde_json::Map".into(),
+        Type::Object(_) => "serde_json::Map<String, serde_json::Value>".into(),
         Type::Array(a) => gen_array_type(a),
         Type::Boolean {} => "bool".into(),
     }
@@ -147,7 +149,7 @@ fn generate_struct(
             for (name, refor) in obj.properties {
                 let is_required = required.contains(&name);
                 let t = get_property_type_from_schema_refor(refor.unbox(), is_required);
-                r#struct.field(&format!("pub {}", &name.to_snek_case()), &t);
+                r#struct.field(&format!("pub {}", &name.to_snek_case().into_safe()), &t);
             }
         }
         Type::Array(a) => {
