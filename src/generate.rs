@@ -68,19 +68,23 @@ fn get_integer_type(t: IntegerType) -> String {
     }
 }
 
+fn gen_type_name_for_type(t: Type) -> String {
+    match t {
+        Type::String(_) => "String".into(),
+        Type::Number(f) => get_number_type(f),
+        Type::Integer(f) => get_integer_type(f),
+        Type::Object(_) => "serde_json::Map".into(),
+        Type::Array(a) => gen_array_type(a),
+        Type::Boolean {} => "bool".into(),
+    }
+}
+
 fn gen_property_type_for_schema_kind(sk: SchemaKind) -> String {
     let t = match sk {
         SchemaKind::Type(r#type) => r#type,
         _ => panic!("Does not support 'oneOf', 'anyOf' 'allOf', 'not' and 'any'"),
     };
-    match t {
-        Type::String(_) => "String".into(),
-        Type::Number(f) => get_number_type(f),
-        Type::Integer(f) => get_integer_type(f),
-        Type::Object(_) => todo!(),
-        Type::Array(a) => gen_array_type(a),
-        Type::Boolean {} => "bool".into(),
-    }
+    gen_type_name_for_type(t)
 }
 
 fn get_property_type_from_schema_refor(refor: ReferenceOr<Schema>, is_required: bool) -> String {
@@ -150,8 +154,12 @@ fn generate_struct(
             scope.raw(&format!("pub type {} = {};", name, gen_array_type(a)));
         }
         t => {
-            println!("#{:#?}", t);
-            unreachable!();
+            println!("#{}: {:#?}", name, t);
+            scope.raw(&format!(
+                "pub type {} = {};",
+                name,
+                gen_type_name_for_type(t)
+            ));
         }
     }
 }
