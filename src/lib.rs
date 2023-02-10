@@ -16,7 +16,8 @@ pub fn generate<P1: AsRef<std::path::Path>, P2: AsRef<std::path::Path>>(
     output_filename: P2,
     derivatives: Option<&[&str]>,
     imports: Option<&[(&str, &str)]>,
-    annotations: Option<&[&str]>,
+    annotations_before: Option<&[&str]>,
+    annotations_after: Option<&[&str]>,
 ) -> Result<(), GenError> {
     let schema_filename = schema_filename.as_ref();
     let data = std::fs::read_to_string(schema_filename)?;
@@ -26,7 +27,13 @@ pub fn generate<P1: AsRef<std::path::Path>, P2: AsRef<std::path::Path>>(
         o => return Err(GenError::WrongFileExtension(o.map(|s| s.to_owned()))),
     };
     let schemas_map = parse::parse_schema(oapi);
-    let resp = generate::generate(schemas_map, derivatives, imports, annotations);
+    let resp = generate::generate(
+        schemas_map,
+        derivatives,
+        imports,
+        annotations_before,
+        annotations_after,
+    );
     std::fs::write(output_filename, resp)?;
     Ok(())
 }

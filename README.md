@@ -27,11 +27,18 @@ fn main() {
         format!("{}/{}", std::env::var("OUT_DIR").unwrap(), "oapi.rs"),
         Some(&["Clone", "Serialize", "Deserialize"]),
         Some(&[("serde", "Serialize"), ("serde", "Deserialize")]),
+        Some(&[r#"#[skip_serializing_none]"#]),
         Some(&[r#"#[serde(rename_all = "camelCase")]"#]),
-    )
-    .unwrap();
+    ).unwrap();
 }
 ```
+
+The first aparameter is path to oapi schema.
+The second is the target output rust file.
+The third is derive statements.
+The fourth is use statements, being tuples of the path to an object and the object
+the fifth is annotations that are to be put before the derive statement. Sometimes such are required, like serde\_with.
+The sixth is annotations that are to be put after the derive statement. Most annotations would be applied like that.
 
 ### code:
 ```rust
