@@ -134,16 +134,16 @@ fn generate_struct(
 ) {
     match r#type {
         Type::Object(obj) => {
-            let mut derivs = vec!["Debug"];
-            if let Some(derivatives) = derivatives {
-                derivs.extend(derivatives);
-            }
-            scope.raw(&format!("#[derive({})]", derivs.join(", ")));
             if let Some(annotations) = annotations {
                 for annotation in annotations {
                     scope.raw(annotation);
                 }
             }
+            let mut derivs = vec!["Debug"];
+            if let Some(derivatives) = derivatives {
+                derivs.extend(derivatives);
+            }
+            scope.raw(&format!("#[derive({})]", derivs.join(", ")));
             let r#struct = scope.new_struct(&name).vis("pub");
             let required = obj.required.into_iter().collect::<HashSet<String>>();
             for (name, refor) in obj.properties {
