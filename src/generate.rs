@@ -13,8 +13,8 @@ pub fn generate(
     schemas: BTreeMap<String, Schema>,
     derivatives: Option<&[&str]>,
     imports: Option<&[(&str, &str)]>,
-    annotations_before: Option<&[&str]>,
-    annotations_after: Option<&[&str]>,
+    annotations_before: Option<&[(&str, Option<&[&str]>)]>,
+    annotations_after: Option<&[(&str, Option<&[&str]>)]>,
 ) -> String {
     let mut scope = Scope::new();
     if let Some(imports) = imports {
@@ -40,8 +40,8 @@ fn generate_for_schema(
     name: String,
     schema: Schema,
     derivatives: Option<&[&str]>,
-    annotations_before: Option<&[&str]>,
-    annotations_after: Option<&[&str]>,
+    annotations_before: Option<&[(&str, Option<&[&str]>)]>,
+    annotations_after: Option<&[(&str, Option<&[&str]>)]>,
 ) {
     match schema.schema_kind {
         SchemaKind::Type(r#type) => generate_struct(
@@ -156,14 +156,21 @@ fn generate_struct(
     r#type: Type,
 
     derivatives: Option<&[&str]>,
-    annotations_before: Option<&[&str]>,
-    annotations_after: Option<&[&str]>,
+    annotations_before: Option<&[(&str, Option<&[&str]>)]>,
+    annotations_after: Option<&[(&str, Option<&[&str]>)]>,
 ) {
     match r#type {
         Type::Object(obj) => {
             if let Some(annotations) = annotations_before {
-                for annotation in annotations {
-                    scope.raw(annotation);
+                for (annotation, exceptions) in annotations {
+                    let is_exception = if let Some(exceptions) = exceptions {
+                        exceptions.iter().any(|e| **e == *name.as_str())
+                    } else {
+                        false
+                    };
+                    if !is_exception {
+                        scope.raw(annotation);
+                    }
                 }
             }
             let mut derivs = vec!["Debug"];
@@ -173,8 +180,15 @@ fn generate_struct(
             scope.raw(&format!("#[derive({})]", derivs.join(", ")));
 
             if let Some(annotations) = annotations_after {
-                for annotation in annotations {
-                    scope.raw(annotation);
+                for (annotation, exceptions) in annotations {
+                    let is_exception = if let Some(exceptions) = exceptions {
+                        exceptions.iter().any(|e| **e == *name.as_str())
+                    } else {
+                        false
+                    };
+                    if !is_exception {
+                        scope.raw(annotation);
+                    }
                 }
             }
 
@@ -205,12 +219,19 @@ fn generate_enum(
     name: String,
     types: Vec<ReferenceOr<Schema>>,
     derivatives: Option<&[&str]>,
-    annotations_before: Option<&[&str]>,
-    annotations_after: Option<&[&str]>,
+    annotations_before: Option<&[(&str, Option<&[&str]>)]>,
+    annotations_after: Option<&[(&str, Option<&[&str]>)]>,
 ) {
     if let Some(annotations) = annotations_before {
-        for annotation in annotations {
-            scope.raw(annotation);
+        for (annotation, exceptions) in annotations {
+            let is_exception = if let Some(exceptions) = exceptions {
+                exceptions.iter().any(|e| **e == *name.as_str())
+            } else {
+                false
+            };
+            if !is_exception {
+                scope.raw(annotation);
+            }
         }
     }
 
@@ -221,8 +242,15 @@ fn generate_enum(
     scope.raw(&format!("#[derive({})]", derivs.join(", ")));
 
     if let Some(annotations) = annotations_after {
-        for annotation in annotations {
-            scope.raw(annotation);
+        for (annotation, exceptions) in annotations {
+            let is_exception = if let Some(exceptions) = exceptions {
+                exceptions.iter().any(|e| **e == *name.as_str())
+            } else {
+                false
+            };
+            if !is_exception {
+                scope.raw(annotation);
+            }
         }
     }
     let r#enum = scope.new_enum(&name).vis("pub");

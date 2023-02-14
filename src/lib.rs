@@ -16,8 +16,8 @@ pub fn generate<P1: AsRef<std::path::Path>, P2: AsRef<std::path::Path>>(
     output_filename: P2,
     derivatives: Option<&[&str]>,
     imports: Option<&[(&str, &str)]>,
-    annotations_before: Option<&[&str]>,
-    annotations_after: Option<&[&str]>,
+    annotations_before: Option<&[(&str, Option<&[&str]>)]>,
+    annotations_after: Option<&[(&str, Option<&[&str]>)]>,
 ) -> Result<(), GenError> {
     let schema_filename = schema_filename.as_ref();
     let data = std::fs::read_to_string(schema_filename)?;

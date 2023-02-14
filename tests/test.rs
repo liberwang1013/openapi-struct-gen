@@ -7,8 +7,11 @@ fn test_generate() {
         concat!(env!("CARGO_TARGET_TMPDIR"), "/gen.rs"),
         Some(&["Clone", "Serialize", "Deserialize"]),
         Some(&[("serde", "Serialize"), ("serde", "Deserialize")]),
-        Some(&[r#"#[skip_serializing_none]"#]),
-        Some(&[r#"#[serde(rename_all = "camelCase")]"#]),
+        Some(&[(r#"#[skip_serializing_none]"#, None)]),
+        Some(&[(
+            r#"#[serde(rename_all = "camelCase")]"#,
+            Some(&["SearchRequest"]),
+        )]),
     )
     .unwrap();
 }
