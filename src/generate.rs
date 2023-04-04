@@ -13,8 +13,8 @@ pub fn generate(
     schemas: BTreeMap<String, Schema>,
     derivatives: Option<&[&str]>,
     imports: Option<&[(&str, &str)]>,
-    annotations_before: Option<&[(&str, Option<&[&str]>)]>,
-    annotations_after: Option<&[(&str, Option<&[&str]>)]>,
+    container_attrs: Option<&[(&str, Option<&[&str]>)]>,
+    field_attrs: Option<&[(&str, Option<&[&str]>)]>,
 ) -> String {
     let mut scope = Scope::new();
     if let Some(imports) = imports {
@@ -28,8 +28,8 @@ pub fn generate(
             name,
             schema,
             derivatives,
-            annotations_before,
-            annotations_after,
+            container_attrs,
+            field_attrs,
         );
     }
     scope.to_string()
@@ -40,8 +40,8 @@ fn generate_for_schema(
     name: String,
     schema: Schema,
     derivatives: Option<&[&str]>,
-    annotations_before: Option<&[(&str, Option<&[&str]>)]>,
-    annotations_after: Option<&[(&str, Option<&[&str]>)]>,
+    container_attrs: Option<&[(&str, Option<&[&str]>)]>,
+    field_attrs: Option<&[(&str, Option<&[&str]>)]>,
 ) {
     match schema.schema_kind {
         SchemaKind::Type(r#type) => generate_struct(
@@ -49,24 +49,24 @@ fn generate_for_schema(
             name,
             r#type,
             derivatives,
-            annotations_before,
-            annotations_after,
+            container_attrs,
+            field_attrs,
         ),
         SchemaKind::OneOf { one_of } => generate_enum(
             scope,
             name,
             one_of,
             derivatives,
-            annotations_before,
-            annotations_after,
+            container_attrs,
+            field_attrs,
         ),
         SchemaKind::AnyOf { any_of } => generate_enum(
             scope,
             name,
             any_of,
             derivatives,
-            annotations_before,
-            annotations_after,
+            container_attrs,
+            field_attrs,
         ),
         _ => panic!("Does not support 'allOf', 'not' and 'any'"),
     }
@@ -155,7 +155,7 @@ fn generate_struct(
     name: String,
     r#type: Type,
     derivatives: Option<&[&str]>,
-    object_attrs: Option<&[(&str, Option<&[&str]>)]>,
+    container_attrs: Option<&[(&str, Option<&[&str]>)]>,
     field_attrs: Option<&[(&str, Option<&[&str]>)]>,
 ) {
     match r#type {
@@ -173,9 +173,9 @@ fn generate_struct(
                 r#struct.derive(r#derive);
             }
 
-            // add object addr
-            if let Some(annotations) = object_attrs {
-                for (annotation, exceptions) in annotations {
+            // add container attribute
+            if let Some(attrs) = container_attrs {
+                for (attr, exceptions) in attrs {
                     let is_exception = if let Some(exceptions) = exceptions {
                         exceptions.iter().any(|e| **e == *name.as_str())
                     } else {
@@ -183,7 +183,7 @@ fn generate_struct(
                     };
                     println!("{}", is_exception);
                     if !is_exception {
-                        r#struct.attr(*annotation);
+                        r#struct.attr(*attr);
                     }
                 }
             }
@@ -195,8 +195,8 @@ fn generate_struct(
                 let mut r#field = Field::new(&name.clone().to_snek_case().into_safe(), &t)
                     .vis("pub")
                     .to_owned();
-                if let Some(annotations) = field_attrs {
-                    for (annotation, exceptions) in annotations {
+                if let Some(attrs) = field_attrs {
+                    for (attr, exceptions) in attrs {
                         let is_exception = if let Some(exceptions) = exceptions {
                             exceptions.iter().any(|e| **e == *name.as_str())
                         } else {
@@ -204,7 +204,7 @@ fn generate_struct(
                         };
                         println!("{}", is_exception);
                         if !is_exception {
-                            r#field.annotation(*annotation);
+                            r#field.annotation(*attr);
                         }
                     }
                 }
@@ -230,10 +230,10 @@ fn generate_enum(
     name: String,
     types: Vec<ReferenceOr<Schema>>,
     derivatives: Option<&[&str]>,
-    annotations_before: Option<&[(&str, Option<&[&str]>)]>,
-    annotations_after: Option<&[(&str, Option<&[&str]>)]>,
+    container_attrs: Option<&[(&str, Option<&[&str]>)]>,
+    field_attrs: Option<&[(&str, Option<&[&str]>)]>,
 ) {
-    if let Some(annotations) = annotations_before {
+    if let Some(annotations) = container_attrs {
         for (annotation, exceptions) in annotations {
             let is_exception = if let Some(exceptions) = exceptions {
                 exceptions.iter().any(|e| **e == *name.as_str())
@@ -251,7 +251,7 @@ fn generate_enum(
         derivs.extend(derivatives);
     }
 
-    if let Some(annotations) = annotations_after {
+    if let Some(annotations) = field_attrs {
         for (annotation, exceptions) in annotations {
             let is_exception = if let Some(exceptions) = exceptions {
                 exceptions.iter().any(|e| **e == *name.as_str())
