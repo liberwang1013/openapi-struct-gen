@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use check_keyword::CheckKeyword;
 
-use codegen::Scope;
+use codegen::{Field, Scope};
 use heck::ToSnekCase;
 use openapiv3::{
     ArrayType, IntegerFormat, IntegerType, NumberFormat, NumberType, ReferenceOr, Schema,
@@ -154,50 +154,61 @@ fn generate_struct(
     scope: &mut Scope,
     name: String,
     r#type: Type,
-
     derivatives: Option<&[&str]>,
-    annotations_before: Option<&[(&str, Option<&[&str]>)]>,
-    annotations_after: Option<&[(&str, Option<&[&str]>)]>,
+    object_attrs: Option<&[(&str, Option<&[&str]>)]>,
+    field_attrs: Option<&[(&str, Option<&[&str]>)]>,
 ) {
     match r#type {
         Type::Object(obj) => {
-            if let Some(annotations) = annotations_before {
-                for (annotation, exceptions) in annotations {
-                    let is_exception = if let Some(exceptions) = exceptions {
-                        exceptions.iter().any(|e| **e == *name.as_str())
-                    } else {
-                        false
-                    };
-                    if !is_exception {
-                        scope.raw(annotation);
-                    }
-                }
-            }
             let mut derivs = vec!["Debug"];
             if let Some(derivatives) = derivatives {
                 derivs.extend(derivatives);
             }
-            scope.raw(&format!("#[derive({})]", derivs.join(", ")));
 
-            if let Some(annotations) = annotations_after {
+            // add struct
+            let r#struct = scope.new_struct(&name).vis("pub");
+
+            // add derives to struct
+            for r#derive in derivs {
+                r#struct.derive(r#derive);
+            }
+
+            // add object addr
+            if let Some(annotations) = object_attrs {
                 for (annotation, exceptions) in annotations {
                     let is_exception = if let Some(exceptions) = exceptions {
                         exceptions.iter().any(|e| **e == *name.as_str())
                     } else {
                         false
                     };
+                    println!("{}", is_exception);
                     if !is_exception {
-                        scope.raw(annotation);
+                        r#struct.attr(*annotation);
                     }
                 }
             }
 
-            let r#struct = scope.new_struct(&name).vis("pub");
             let required = obj.required.into_iter().collect::<HashSet<String>>();
             for (name, refor) in obj.properties {
                 let is_required = required.contains(&name);
                 let t = get_property_type_from_schema_refor(refor.unbox(), is_required);
-                r#struct.field(&format!("pub {}", &name.to_snek_case().into_safe()), &t);
+                let mut r#field = Field::new(&name.clone().to_snek_case().into_safe(), &t)
+                    .vis("pub")
+                    .to_owned();
+                if let Some(annotations) = field_attrs {
+                    for (annotation, exceptions) in annotations {
+                        let is_exception = if let Some(exceptions) = exceptions {
+                            exceptions.iter().any(|e| **e == *name.as_str())
+                        } else {
+                            false
+                        };
+                        println!("{}", is_exception);
+                        if !is_exception {
+                            r#field.annotation(*annotation);
+                        }
+                    }
+                }
+                r#struct.push_field(field);
             }
         }
         Type::Array(a) => {
@@ -230,7 +241,7 @@ fn generate_enum(
                 false
             };
             if !is_exception {
-                scope.raw(annotation);
+                scope.raw(*annotation);
             }
         }
     }
@@ -239,7 +250,6 @@ fn generate_enum(
     if let Some(derivatives) = derivatives {
         derivs.extend(derivatives);
     }
-    scope.raw(&format!("#[derive({})]", derivs.join(", ")));
 
     if let Some(annotations) = annotations_after {
         for (annotation, exceptions) in annotations {
@@ -249,7 +259,7 @@ fn generate_enum(
                 false
             };
             if !is_exception {
-                scope.raw(annotation);
+                scope.raw(*annotation);
             }
         }
     }
