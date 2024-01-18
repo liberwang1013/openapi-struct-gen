@@ -103,7 +103,7 @@ fn gen_type_name_for_type(t: Type) -> String {
         Type::Integer(f) => get_integer_type(f),
         Type::Object(_) => "serde_json::Map<String, serde_json::Value>".into(),
         Type::Array(a) => gen_array_type(a),
-        Type::Boolean {} => "bool".into(),
+        Type::Boolean(_) => "bool".into(),
     }
 }
 
